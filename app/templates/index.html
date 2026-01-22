@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Utilization Dashboard</title>
+    <link rel="stylesheet" href="/static/css/main.css" />
+</head>
+<body>
+<main class="layout">
+    <header>
+        <div>
+            <h1>Utilization Dashboard</h1>
+            <p>Login activity insights backed by Supabase</p>
+        </div>
+        <button id="refresh-btn">Refresh Now</button>
+    </header>
+
+    <section class="summary" id="summary-cards">
+        <article>
+            <h3>Distinct Active Users</h3>
+            <p id="distinct-users">0</p>
+        </article>
+        <article>
+            <h3>Today's Active Users</h3>
+            <p id="today-user-count">0</p>
+        </article>
+        <article>
+            <h3>Top Active User</h3>
+            <p id="top-active-user">—</p>
+        </article>
+        <article>
+            <h3>Most Recent Login</h3>
+            <p id="latest-login">—</p>
+        </article>
+    </section>
+
+    <section class="secondary">
+        <div>
+            <div class="section-header">
+                <h2>Active Days by User</h2>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Active Days</th>
+                    </tr>
+                    </thead>
+                    <tbody id="active-days-body">
+                    <tr><td colspan="2">Loading…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div>
+            <div class="section-header">
+                <h2>Last Login Date</h2>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Last Login</th>
+                    </tr>
+                    </thead>
+                    <tbody id="last-login-body">
+                    <tr><td colspan="2">Loading…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <div class="section-header">
+            <h2>Today's Active Users</h2>
+            <span id="last-updated">Never updated</span>
+        </div>
+        <div id="today-users-list" class="chip-container">
+            <span class="chip">Loading…</span>
+        </div>
+    </section>
+</main>
+
+<script>
+    async function fetchLoginSummary() {
+        const response = await fetch("/api/metrics/login-summary");
+        if (!response.ok) throw new Error("Failed to fetch login summary");
+        return response.json();
+    }
+
+    async function refreshDashboard() {
+        try {
+            const data = await fetchLoginSummary();
+            document.getElementById("distinct-users").textContent = data.distinct_user_count;
+            document.getElementById("today-user-count").textContent = data.today_users.length;
+            document.getElementById("top-active-user").textContent = data.active_days.length ? `${data.active_days[0].display_name} (${data.active_days[0].active_days})` : "—";
+            document.getElementById("latest-login").textContent = data.last_logins.length ? `${data.last_logins[0].display_name} (${data.last_logins[0].last_login_date})` : "—";
+
+            const activeBody = document.getElementById("active-days-body");
+            activeBody.innerHTML = data.active_days.length
+                ? data.active_days.map(item => `<tr><td>${item.display_name}</td><td>${item.active_days}</td></tr>`).join("")
+                : "<tr><td colspan='2'>No data available</td></tr>";
+
+            const lastLoginBody = document.getElementById("last-login-body");
+            lastLoginBody.innerHTML = data.last_logins.length
+                ? data.last_logins.map(item => `<tr><td>${item.display_name}</td><td>${item.last_login_date}</td></tr>`).join("")
+                : "<tr><td colspan='2'>No data available</td></tr>";
+
+            const todayList = document.getElementById("today-users-list");
+            todayList.innerHTML = data.today_users.length
+                ? data.today_users.map(user => `<span class="chip">${user}</span>`).join("")
+                : "<span class='chip muted'>No logins recorded today</span>";
+
+            document.getElementById("last-updated").textContent = `Updated ${new Date().toLocaleTimeString()}`;
+        } catch (err) {
+            document.getElementById("last-updated").textContent = err.message;
+        }
+    }
+
+    document.getElementById("refresh-btn").addEventListener("click", refreshDashboard);
+    refreshDashboard();
+    setInterval(refreshDashboard, 30000);
+</script>
+</body>
+</html>
