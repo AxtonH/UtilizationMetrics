@@ -50,3 +50,4 @@ uvicorn app.main:app --reload
 
 - Provide the same environment variables via your hosting platform (Render, Fly.io, etc.).
 - Keep the service role key secret; only expose the anon key to public clients if necessary.
+- For Railway deployments, the provided `railway.json` pins the builder to Nixpacks and starts Uvicorn via `uvicorn app.main:app --host 0.0.0.0 --port $PORT`. Adjust if you change entrypoints or healthcheck paths.
